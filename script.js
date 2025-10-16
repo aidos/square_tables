@@ -4,6 +4,7 @@ let correctAnswer = 0;
 let recognition = null;
 let isListening = false;
 let shouldBeListening = false; // Track if we want recognition to be active
+let selectedVoice = null;
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -46,6 +47,74 @@ function wordsToNumber(text) {
     return total > 0 ? total : null;
 }
 
+// Load and select the best available voice
+function loadVoices() {
+    const voices = window.speechSynthesis.getVoices();
+
+    if (voices.length === 0) {
+        console.log('No voices loaded yet');
+        return;
+    }
+
+    console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+
+    // Try to find a good English voice (prefer Google, Apple, or Microsoft natural voices)
+    const preferredVoices = [
+        'Google US English',
+        'Google UK English Female',
+        'Samantha',
+        'Karen',
+        'Daniel',
+        'Microsoft Zira',
+        'Microsoft David',
+        'Alex'
+    ];
+
+    for (const preferred of preferredVoices) {
+        const voice = voices.find(v => v.name.includes(preferred));
+        if (voice) {
+            console.log('Selected voice:', voice.name);
+            selectedVoice = voice;
+            return;
+        }
+    }
+
+    // Fallback: find any English voice that's not "Google" default
+    const englishVoice = voices.find(v =>
+        v.lang.startsWith('en') &&
+        !v.name.includes('eSpeak') &&
+        v.localService
+    );
+
+    if (englishVoice) {
+        console.log('Selected fallback voice:', englishVoice.name);
+        selectedVoice = englishVoice;
+        return;
+    }
+
+    // Last resort: just pick the first English voice
+    const anyEnglish = voices.find(v => v.lang.startsWith('en'));
+    if (anyEnglish) {
+        console.log('Selected any English voice:', anyEnglish.name);
+        selectedVoice = anyEnglish;
+    } else {
+        console.log('Using default voice');
+        selectedVoice = null;
+    }
+}
+
+// Initialize voices
+if ('speechSynthesis' in window) {
+    // Load voices immediately
+    loadVoices();
+
+    // Also set up listener for when voices load (Chrome needs this)
+    window.speechSynthesis.onvoiceschanged = () => {
+        console.log('Voices changed event fired');
+        loadVoices();
+    };
+}
+
 // Speak text using Web Speech API
 function speak(text, onComplete) {
     console.log('Speaking:', text);
@@ -55,8 +124,9 @@ function speak(text, onComplete) {
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.9; // Slightly slower for clarity
-        utterance.pitch = 1.0;
+        utterance.voice = selectedVoice;
+        utterance.rate = 0.85; // Slightly slower for clarity
+        utterance.pitch = 1.1; // Slightly higher pitch for friendliness
         utterance.volume = 1.0;
 
         // Call callback when speech ends
