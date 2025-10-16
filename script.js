@@ -45,6 +45,42 @@ function wordsToNumber(text) {
     return total > 0 ? total : null;
 }
 
+// Speak text using Web Speech API
+function speak(text, onComplete) {
+    console.log('Speaking:', text);
+
+    if ('speechSynthesis' in window) {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9; // Slightly slower for clarity
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Call callback when speech ends
+        if (onComplete) {
+            utterance.onend = () => {
+                console.log('Speech finished');
+                onComplete();
+            };
+        }
+
+        utterance.onerror = (event) => {
+            console.log('Speech error:', event);
+            if (onComplete) onComplete();
+        };
+
+        console.log('Starting speech synthesis');
+        window.speechSynthesis.speak(utterance);
+    } else {
+        console.log('Speech synthesis not supported');
+        if (onComplete) {
+            onComplete();
+        }
+    }
+}
+
 // Generate a new question
 function generateQuestion() {
     currentNum1 = Math.floor(Math.random() * 10) + 1; // 1-10
@@ -61,6 +97,27 @@ function generateQuestion() {
     // Clear display and feedback
     document.getElementById('answerDisplay').textContent = '';
     document.getElementById('feedback').textContent = '';
+
+    // Stop recognition while speaking the question
+    if (recognition) {
+        recognition.stop();
+    }
+
+    // Ask the question out loud, then start recognition when done
+    setTimeout(() => {
+        speak(`${currentNum1} times ${currentNum2} is`, () => {
+            // Start recognition after speech finishes
+            if (recognition) {
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('Recognition already started');
+                    }
+                }, 200);
+            }
+        });
+    }, 300);
 }
 
 // Generate the visual blocks grid
@@ -121,15 +178,6 @@ function checkAnswer() {
         // Wait 2 seconds then generate new question
         setTimeout(() => {
             generateQuestion();
-
-            // Restart recognition
-            if (recognition) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.log('Recognition already started');
-                }
-            }
         }, 2000);
     } else {
         // Wrong answer
@@ -141,6 +189,15 @@ function checkAnswer() {
             document.getElementById('answerDisplay').textContent = '';
             feedback.textContent = '';
             feedback.className = 'feedback';
+
+            // Restart recognition for next attempt
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition already started');
+                }
+            }
         }, 1500);
     }
 }
@@ -172,16 +229,7 @@ function initSpeechRecognition() {
         isListening = false;
         document.body.classList.remove('listening');
 
-        // Auto-restart recognition
-        setTimeout(() => {
-            if (recognition) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    // Recognition already started, ignore
-                }
-            }
-        }, 100);
+        // Don't auto-restart - we control it manually now
     };
 
     recognition.onresult = (event) => {
@@ -200,6 +248,12 @@ function initSpeechRecognition() {
 
         if (number !== null) {
             document.getElementById('answerDisplay').textContent = number;
+
+            // Stop recognition before checking answer
+            if (recognition) {
+                recognition.stop();
+            }
+
             checkAnswer();
         }
     };
@@ -212,18 +266,20 @@ function initSpeechRecognition() {
         }
     };
 
-    // Start recognition
-    try {
-        recognition.start();
-    } catch (e) {
-        console.log('Could not start recognition:', e);
-    }
+    // Don't start recognition immediately - wait for first question to be asked
 }
 
-// Start the game
-generateQuestion();
+// Initialize speech recognition first
+initSpeechRecognition();
 
-// Initialize speech recognition after a short delay
-setTimeout(() => {
-    initSpeechRecognition();
-}, 500);
+// Handle start button click
+document.getElementById('startButton').addEventListener('click', () => {
+    // Hide start overlay
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('gameContainer').style.display = 'grid';
+
+    // Start the game
+    setTimeout(() => {
+        generateQuestion();
+    }, 300);
+});
