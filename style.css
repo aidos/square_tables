@@ -52,7 +52,8 @@ body.listening {
 
 .table-btn {
     font-size: 36px;
-    padding: 25px;
+    width: 80px;
+    height: 80px;
     background-color: #f8f8f8;
     color: #999;
     border: 4px solid #ddd;
@@ -78,16 +79,6 @@ body.listening {
     color: white;
     border-color: #45a049;
     box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
-}
-
-.table-btn.active::after {
-    content: '✓';
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    font-size: 22px;
-    color: white;
-    font-weight: bold;
 }
 
 .start-button {
