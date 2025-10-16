@@ -388,6 +388,24 @@ function initSpeechRecognition() {
             number = wordsToNumber(transcript);
         }
 
+        // Handle multiple numbers in transcript (e.g., "three three" -> use last one)
+        if (number === null) {
+            const words = transcript.split(/\s+/);
+            const numbers = [];
+            for (const word of words) {
+                const num = wordsToNumber(word);
+                if (num !== null) {
+                    numbers.push(num);
+                }
+            }
+
+            // If we found any numbers, use the last one
+            if (numbers.length > 0) {
+                number = numbers[numbers.length - 1];
+                console.log('Found multiple numbers, using last:', number);
+            }
+        }
+
         if (number !== null) {
             document.getElementById('answerDisplay').textContent = number;
 
