@@ -384,12 +384,7 @@ function initSpeechRecognition() {
         if (digitMatch) {
             number = digitMatch[0];
         } else {
-            // Try to convert words to numbers
-            number = wordsToNumber(transcript);
-        }
-
-        // Handle multiple numbers in transcript (e.g., "three three" -> use last one)
-        if (number === null) {
+            // Split into words and find all numbers
             const words = transcript.split(/\s+/);
             const numbers = [];
             for (const word of words) {
@@ -402,7 +397,9 @@ function initSpeechRecognition() {
             // If we found any numbers, use the last one
             if (numbers.length > 0) {
                 number = numbers[numbers.length - 1];
-                console.log('Found multiple numbers, using last:', number);
+                if (numbers.length > 1) {
+                    console.log('Found multiple numbers, using last:', number);
+                }
             }
         }
 
