@@ -28,7 +28,7 @@ body {
 .top-number {
     font-size: 72px;
     font-weight: bold;
-    color: #333;
+    color: #e91e63;
     text-align: center;
 }
 
@@ -50,12 +50,25 @@ body {
     height: 40px;
     background-color: #4CAF50;
     border-radius: 4px;
+    position: relative;
+}
+
+.block.pink {
+    background-color: #e91e63;
+}
+
+.block.blue {
+    background-color: #2196F3;
+}
+
+.block.diagonal-split {
+    background: linear-gradient(to bottom right, #e91e63 0%, #e91e63 50%, #2196F3 50%, #2196F3 100%);
 }
 
 .right-number {
     font-size: 72px;
     font-weight: bold;
-    color: #333;
+    color: #2196F3;
 }
 
 .answer-section {

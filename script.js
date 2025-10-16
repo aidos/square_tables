@@ -34,6 +34,25 @@ function generateBlocks(cols, rows) {
     for (let i = 0; i < cols * rows; i++) {
         const block = document.createElement('div');
         block.className = 'block';
+
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+
+        // Top row is pink
+        if (row === 0) {
+            block.classList.add('pink');
+        }
+
+        // Right column is blue
+        if (col === cols - 1) {
+            block.classList.add('blue');
+        }
+
+        // Top-right corner gets both colors (diagonal split)
+        if (row === 0 && col === cols - 1) {
+            block.classList.add('diagonal-split');
+        }
+
         grid.appendChild(block);
     }
 }
