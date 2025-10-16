@@ -5,6 +5,7 @@ let recognition = null;
 let isListening = false;
 let shouldBeListening = false; // Track if we want recognition to be active
 let selectedVoice = null;
+let consecutiveRestarts = 0; // Track restart loop
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -128,7 +129,7 @@ function speak(text, onComplete) {
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.voice = selectedVoice;
-        utterance.rate = 0.85; // Slightly slower for clarity
+        utterance.rate = 1.0; // Normal speed
         utterance.pitch = 1.1; // Slightly higher pitch for friendliness
         utterance.volume = 1.0;
 
@@ -181,7 +182,7 @@ function generateQuestion() {
     // Ask the question out loud, then start recognition when done
     setTimeout(() => {
         speak(`${currentNum1} times ${currentNum2} is`, () => {
-            // Start recognition after speech finishes
+            // Start recognition immediately after speech finishes
             shouldBeListening = true;
             if (recognition && !isListening) {
                 setTimeout(() => {
@@ -190,10 +191,10 @@ function generateQuestion() {
                     } catch (e) {
                         console.log('Recognition already started:', e.message);
                     }
-                }, 200);
+                }, 50); // Reduced from 200ms to 50ms
             }
         });
-    }, 300);
+    }, 200); // Reduced from 300ms to 200ms
 }
 
 // Generate the visual blocks grid
@@ -301,6 +302,7 @@ function initSpeechRecognition() {
         isListening = true;
         document.body.classList.add('listening');
         console.log('Recognition started');
+        consecutiveRestarts = 0; // Reset counter on successful start
     };
 
     recognition.onend = () => {
@@ -310,6 +312,28 @@ function initSpeechRecognition() {
 
         // Restart if we should be listening
         if (shouldBeListening) {
+            consecutiveRestarts++;
+
+            // If we're restarting too quickly, add a longer delay
+            const delay = consecutiveRestarts > 3 ? 500 : 100;
+
+            if (consecutiveRestarts > 5) {
+                console.warn('Too many rapid restarts, pausing recognition');
+                consecutiveRestarts = 0;
+                // Wait longer before trying again
+                setTimeout(() => {
+                    if (recognition && shouldBeListening && !isListening) {
+                        try {
+                            console.log('Resuming recognition after pause');
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Could not restart recognition:', e.message);
+                        }
+                    }
+                }, 2000);
+                return;
+            }
+
             setTimeout(() => {
                 if (recognition && shouldBeListening && !isListening) {
                     try {
@@ -318,13 +342,38 @@ function initSpeechRecognition() {
                         console.log('Could not restart recognition:', e.message);
                     }
                 }
-            }, 100);
+            }, delay);
+        } else {
+            consecutiveRestarts = 0;
         }
     };
 
     recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim().toLowerCase();
+        let transcript = event.results[0][0].transcript.trim().toLowerCase();
         console.log('Heard:', transcript);
+
+        // Fix common mishearings (only complete word matches)
+        const corrections = {
+            'sex': 'six',
+            'too': 'two',
+            'to': 'two',
+            'for': 'four',
+            'fore': 'four',
+            'ate': 'eight',
+            'won': 'one',
+            'tin': 'ten'
+        };
+
+        const original = transcript;
+        for (const [wrong, right] of Object.entries(corrections)) {
+            transcript = transcript.replace(new RegExp(`\\b${wrong}\\b`, 'g'), right);
+        }
+
+        if (transcript !== original) {
+            console.log('Corrected from:', original, 'to:', transcript);
+        }
+
+        console.log('Processing:', transcript);
 
         // Try to extract number from speech (digits first)
         let number = null;
@@ -341,6 +390,7 @@ function initSpeechRecognition() {
 
             // Stop recognition before checking answer
             shouldBeListening = false;
+            consecutiveRestarts = 0; // Reset on successful number detection
             if (recognition) {
                 recognition.stop();
             }
@@ -348,6 +398,7 @@ function initSpeechRecognition() {
             checkAnswer();
         } else {
             console.log('No number detected, ignoring:', transcript);
+            consecutiveRestarts = 0; // Reset on any successful recognition (even non-numbers)
             // Just ignore non-numbers, recognition will continue automatically
         }
     };
@@ -372,10 +423,12 @@ initSpeechRecognition();
 document.getElementById('startButton').addEventListener('click', () => {
     // Hide start overlay
     document.getElementById('startOverlay').style.display = 'none';
-    document.getElementById('gameContainer').style.display = 'grid';
 
-    // Start the game
+    // Start the game first, then show container
+    generateQuestion();
+
+    // Show game container after question is generated
     setTimeout(() => {
-        generateQuestion();
-    }, 300);
+        document.getElementById('gameContainer').style.display = 'grid';
+    }, 100);
 });
