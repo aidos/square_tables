@@ -3,6 +3,7 @@ let currentNum2 = 0;
 let correctAnswer = 0;
 let recognition = null;
 let isListening = false;
+let shouldBeListening = false; // Track if we want recognition to be active
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -99,6 +100,7 @@ function generateQuestion() {
     document.getElementById('feedback').textContent = '';
 
     // Stop recognition while speaking the question
+    shouldBeListening = false;
     if (recognition) {
         recognition.stop();
     }
@@ -107,12 +109,13 @@ function generateQuestion() {
     setTimeout(() => {
         speak(`${currentNum1} times ${currentNum2} is`, () => {
             // Start recognition after speech finishes
-            if (recognition) {
+            shouldBeListening = true;
+            if (recognition && !isListening) {
                 setTimeout(() => {
                     try {
                         recognition.start();
                     } catch (e) {
-                        console.log('Recognition already started');
+                        console.log('Recognition already started:', e.message);
                     }
                 }, 200);
             }
@@ -191,11 +194,12 @@ function checkAnswer() {
             feedback.className = 'feedback';
 
             // Restart recognition for next attempt
-            if (recognition) {
+            shouldBeListening = true;
+            if (recognition && !isListening) {
                 try {
                     recognition.start();
                 } catch (e) {
-                    console.log('Recognition already started');
+                    console.log('Recognition already started:', e.message);
                 }
             }
         }, 1500);
@@ -223,13 +227,26 @@ function initSpeechRecognition() {
     recognition.onstart = () => {
         isListening = true;
         document.body.classList.add('listening');
+        console.log('Recognition started');
     };
 
     recognition.onend = () => {
         isListening = false;
         document.body.classList.remove('listening');
+        console.log('Recognition ended, shouldBeListening:', shouldBeListening);
 
-        // Don't auto-restart - we control it manually now
+        // Restart if we should be listening
+        if (shouldBeListening) {
+            setTimeout(() => {
+                if (recognition && shouldBeListening && !isListening) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('Could not restart recognition:', e.message);
+                    }
+                }
+            }, 100);
+        }
     };
 
     recognition.onresult = (event) => {
@@ -250,17 +267,23 @@ function initSpeechRecognition() {
             document.getElementById('answerDisplay').textContent = number;
 
             // Stop recognition before checking answer
+            shouldBeListening = false;
             if (recognition) {
                 recognition.stop();
             }
 
             checkAnswer();
+        } else {
+            console.log('No number detected, ignoring:', transcript);
+            // Just ignore non-numbers, recognition will continue automatically
         }
     };
 
     recognition.onerror = (event) => {
         console.log('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+
+        // Errors like 'no-speech' and 'audio-capture' will trigger onend, which will handle restart
+        if (event.error !== 'aborted' && event.error !== 'no-speech') {
             isListening = false;
             document.body.classList.remove('listening');
         }
