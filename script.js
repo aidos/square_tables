@@ -58,10 +58,9 @@ function generateQuestion() {
     // Generate the blocks grid
     generateBlocks(currentNum1, currentNum2);
 
-    // Clear input and feedback
-    document.getElementById('answerInput').value = '';
+    // Clear display and feedback
+    document.getElementById('answerDisplay').textContent = '';
     document.getElementById('feedback').textContent = '';
-    document.getElementById('answerInput').focus();
 }
 
 // Generate the visual blocks grid
@@ -102,7 +101,7 @@ function generateBlocks(cols, rows) {
 
 // Check the answer
 function checkAnswer() {
-    const userAnswer = parseInt(document.getElementById('answerInput').value);
+    const userAnswer = parseInt(document.getElementById('answerDisplay').textContent);
     const feedback = document.getElementById('feedback');
 
     if (isNaN(userAnswer)) {
@@ -113,7 +112,6 @@ function checkAnswer() {
         // Correct answer
         feedback.textContent = '✓';
         feedback.className = 'feedback correct';
-        document.getElementById('answerInput').disabled = true;
 
         // Stop recognition temporarily
         if (recognition) {
@@ -122,7 +120,6 @@ function checkAnswer() {
 
         // Wait 2 seconds then generate new question
         setTimeout(() => {
-            document.getElementById('answerInput').disabled = false;
             generateQuestion();
 
             // Restart recognition
@@ -139,20 +136,16 @@ function checkAnswer() {
         feedback.textContent = '✗';
         feedback.className = 'feedback incorrect';
 
-        // Clear the input after a short delay so user can see what they guessed
+        // Clear the display and feedback after a delay so user can see what they guessed
         setTimeout(() => {
-            document.getElementById('answerInput').value = '';
-            document.getElementById('answerInput').focus();
-        }, 1000);
+            document.getElementById('answerDisplay').textContent = '';
+            feedback.textContent = '';
+            feedback.className = 'feedback';
+        }, 1500);
     }
 }
 
-// Handle Enter key press
-document.getElementById('answerInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        checkAnswer();
-    }
-});
+// No keyboard input needed anymore - voice only!
 
 // Initialize Speech Recognition
 function initSpeechRecognition() {
@@ -179,18 +172,16 @@ function initSpeechRecognition() {
         isListening = false;
         document.body.classList.remove('listening');
 
-        // Auto-restart recognition if input is not disabled
-        if (!document.getElementById('answerInput').disabled) {
-            setTimeout(() => {
-                if (recognition && !document.getElementById('answerInput').disabled) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        // Recognition already started, ignore
-                    }
+        // Auto-restart recognition
+        setTimeout(() => {
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    // Recognition already started, ignore
                 }
-            }, 100);
-        }
+            }
+        }, 100);
     };
 
     recognition.onresult = (event) => {
@@ -208,7 +199,7 @@ function initSpeechRecognition() {
         }
 
         if (number !== null) {
-            document.getElementById('answerInput').value = number;
+            document.getElementById('answerDisplay').textContent = number;
             checkAnswer();
         }
     };

@@ -89,29 +89,30 @@ body.listening {
     color: #333;
 }
 
-#answerInput {
-    width: 150px;
+.answer-display {
+    min-width: 150px;
     height: 70px;
     font-size: 48px;
     text-align: center;
     border: 3px solid #333;
     border-radius: 8px;
     padding: 10px;
-}
-
-#answerInput:focus {
-    outline: none;
-    border-color: #4CAF50;
-}
-
-#answerInput:disabled {
-    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    font-weight: bold;
+    color: #333;
 }
 
 .feedback {
-    font-size: 64px;
+    font-size: 56px;
     font-weight: bold;
-    min-width: 50px;
+    width: 60px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .feedback.correct {
@@ -120,15 +121,4 @@ body.listening {
 
 .feedback.incorrect {
     color: #f44336;
-}
-
-/* Remove number input arrows */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type=number] {
-    -moz-appearance: textfield;
 }
