@@ -37,17 +37,11 @@ body.listening {
     padding: 40px;
 }
 
-.start-container h1 {
-    color: #333;
-    margin-bottom: 30px;
-    font-size: 42px;
-}
-
 .tables-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 15px;
-    margin-bottom: 30px;
+    padding-bottom: 60px;
 }
 
 .table-btn {
@@ -84,6 +78,7 @@ body.listening {
 .start-button {
     font-size: 32px;
     padding: 20px 40px;
+    margin-top: 30px;
     background-color: #4CAF50;
     color: white;
     border: none;
