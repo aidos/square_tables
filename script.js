@@ -58,13 +58,16 @@ function loadVoices() {
 
     console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
 
-    // Try to find a good English voice (prefer Google, Apple, or Microsoft natural voices)
+    // Try to find a good UK English voice first
     const preferredVoices = [
-        'Google US English',
         'Google UK English Female',
+        'Google UK English Male',
+        'Daniel',
+        'Serena',
+        'Kate',
+        'Google US English',
         'Samantha',
         'Karen',
-        'Daniel',
         'Microsoft Zira',
         'Microsoft David',
         'Alex'
