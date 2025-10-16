@@ -11,6 +11,11 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #e3e9f0;
+    transition: background-color 0.3s ease;
+}
+
+body.listening {
+    background-color: #d4f4dd;
 }
 
 .container {

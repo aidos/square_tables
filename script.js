@@ -1,6 +1,49 @@
 let currentNum1 = 0;
 let currentNum2 = 0;
 let correctAnswer = 0;
+let recognition = null;
+let isListening = false;
+
+// Convert spoken words to numbers
+function wordsToNumber(text) {
+    const numberWords = {
+        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
+        'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
+        'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13,
+        'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17,
+        'eighteen': 18, 'nineteen': 19, 'twenty': 20, 'thirty': 30,
+        'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
+        'eighty': 80, 'ninety': 90, 'hundred': 100
+    };
+
+    text = text.toLowerCase().trim();
+
+    // Direct match
+    if (numberWords[text] !== undefined) {
+        return numberWords[text];
+    }
+
+    // Handle compound numbers like "twenty four" or "twenty-four"
+    const words = text.replace(/-/g, ' ').split(/\s+/);
+    let total = 0;
+    let current = 0;
+
+    for (const word of words) {
+        const num = numberWords[word];
+        if (num !== undefined) {
+            if (num === 100) {
+                current = current === 0 ? 100 : current * 100;
+            } else if (num >= 20) {
+                current += num;
+            } else {
+                current += num;
+            }
+        }
+    }
+
+    total += current;
+    return total > 0 ? total : null;
+}
 
 // Generate a new question
 function generateQuestion() {
@@ -72,17 +115,35 @@ function checkAnswer() {
         feedback.className = 'feedback correct';
         document.getElementById('answerInput').disabled = true;
 
+        // Stop recognition temporarily
+        if (recognition) {
+            recognition.stop();
+        }
+
         // Wait 2 seconds then generate new question
         setTimeout(() => {
             document.getElementById('answerInput').disabled = false;
             generateQuestion();
+
+            // Restart recognition
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition already started');
+                }
+            }
         }, 2000);
     } else {
         // Wrong answer
         feedback.textContent = '✗';
         feedback.className = 'feedback incorrect';
-        document.getElementById('answerInput').value = '';
-        document.getElementById('answerInput').focus();
+
+        // Clear the input after a short delay so user can see what they guessed
+        setTimeout(() => {
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').focus();
+        }, 1000);
     }
 }
 
@@ -93,5 +154,85 @@ document.getElementById('answerInput').addEventListener('keypress', (e) => {
     }
 });
 
+// Initialize Speech Recognition
+function initSpeechRecognition() {
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        console.log('Speech recognition not supported in this browser');
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+        isListening = true;
+        document.body.classList.add('listening');
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        document.body.classList.remove('listening');
+
+        // Auto-restart recognition if input is not disabled
+        if (!document.getElementById('answerInput').disabled) {
+            setTimeout(() => {
+                if (recognition && !document.getElementById('answerInput').disabled) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        // Recognition already started, ignore
+                    }
+                }
+            }, 100);
+        }
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim().toLowerCase();
+        console.log('Heard:', transcript);
+
+        // Try to extract number from speech (digits first)
+        let number = null;
+        const digitMatch = transcript.match(/\d+/);
+        if (digitMatch) {
+            number = digitMatch[0];
+        } else {
+            // Try to convert words to numbers
+            number = wordsToNumber(transcript);
+        }
+
+        if (number !== null) {
+            document.getElementById('answerInput').value = number;
+            checkAnswer();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.log('Speech recognition error:', event.error);
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            isListening = false;
+            document.body.classList.remove('listening');
+        }
+    };
+
+    // Start recognition
+    try {
+        recognition.start();
+    } catch (e) {
+        console.log('Could not start recognition:', e);
+    }
+}
+
 // Start the game
 generateQuestion();
+
+// Initialize speech recognition after a short delay
+setTimeout(() => {
+    initSpeechRecognition();
+}, 500);
