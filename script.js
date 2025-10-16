@@ -6,6 +6,7 @@ let isListening = false;
 let shouldBeListening = false; // Track if we want recognition to be active
 let selectedVoice = null;
 let consecutiveRestarts = 0; // Track restart loop
+let selectedTables = [2, 3, 4, 5, 10]; // Default selected tables
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -158,8 +159,10 @@ function speak(text, onComplete) {
 
 // Generate a new question
 function generateQuestion() {
-    currentNum1 = Math.floor(Math.random() * 10) + 1; // 1-10
-    currentNum2 = Math.floor(Math.random() * 10) + 1; // 1-10
+    // Pick a random number from selected tables
+    currentNum1 = selectedTables[Math.floor(Math.random() * selectedTables.length)];
+    // Pick another random number from selected tables
+    currentNum2 = selectedTables[Math.floor(Math.random() * selectedTables.length)];
     correctAnswer = currentNum1 * currentNum2;
 
     // Update the display
@@ -418,6 +421,28 @@ function initSpeechRecognition() {
 
 // Initialize speech recognition first
 initSpeechRecognition();
+
+// Handle table selection
+document.querySelectorAll('.table-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const table = parseInt(btn.dataset.table);
+
+        if (btn.classList.contains('active')) {
+            // Deselect - but don't allow deselecting all
+            if (selectedTables.length > 1) {
+                btn.classList.remove('active');
+                selectedTables = selectedTables.filter(t => t !== table);
+            }
+        } else {
+            // Select
+            btn.classList.add('active');
+            selectedTables.push(table);
+            selectedTables.sort((a, b) => a - b);
+        }
+
+        console.log('Selected tables:', selectedTables);
+    });
+});
 
 // Handle start button click
 document.getElementById('startButton').addEventListener('click', () => {
