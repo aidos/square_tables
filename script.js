@@ -161,8 +161,8 @@ function speak(text, onComplete) {
 function generateQuestion() {
     // Pick a random number from selected tables
     currentNum1 = selectedTables[Math.floor(Math.random() * selectedTables.length)];
-    // Pick another random number from selected tables
-    currentNum2 = selectedTables[Math.floor(Math.random() * selectedTables.length)];
+    // Multiply by any number from 1-10
+    currentNum2 = Math.floor(Math.random() * 10) + 1;
     correctAnswer = currentNum1 * currentNum2;
 
     // Update the display
