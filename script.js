@@ -188,16 +188,14 @@ function generateQuestion() {
             // Start recognition immediately after speech finishes
             shouldBeListening = true;
             if (recognition && !isListening) {
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.log('Recognition already started:', e.message);
-                    }
-                }, 50); // Reduced from 200ms to 50ms
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition already started:', e.message);
+                }
             }
         });
-    }, 200); // Reduced from 300ms to 200ms
+    }, 100);
 }
 
 // Generate the visual blocks grid
@@ -255,10 +253,10 @@ function checkAnswer() {
             recognition.stop();
         }
 
-        // Wait 2 seconds then generate new question
+        // Wait 1 second then generate new question
         setTimeout(() => {
             generateQuestion();
-        }, 2000);
+        }, 1000);
     } else {
         // Wrong answer
         feedback.textContent = '✗';
