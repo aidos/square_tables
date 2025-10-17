@@ -121,7 +121,7 @@ if ('speechSynthesis' in window) {
 }
 
 // Speak text using Web Speech API
-function speak(text, onComplete) {
+function speak(text, onComplete, onNearEnd) {
     console.log('Speaking:', text);
 
     if ('speechSynthesis' in window) {
@@ -133,6 +133,16 @@ function speak(text, onComplete) {
         utterance.rate = 1.0; // Normal speed
         utterance.pitch = 1.1; // Slightly higher pitch for friendliness
         utterance.volume = 1.0;
+
+        // Estimate speech duration and call onNearEnd slightly before it finishes
+        if (onNearEnd) {
+            const estimatedDuration = (text.length / 15) * 1000; // Rough estimate: ~15 chars/second
+            const triggerTime = Math.max(100, estimatedDuration - 150); // Start mic 150ms before end
+            setTimeout(() => {
+                console.log('Near end of speech, triggering early callback');
+                onNearEnd();
+            }, triggerTime);
+        }
 
         // Call callback when speech ends
         if (onComplete) {
@@ -184,17 +194,24 @@ function generateQuestion() {
 
     // Ask the question out loud, then start recognition when done
     setTimeout(() => {
-        speak(`${currentNum1} times ${currentNum2} is`, () => {
-            // Start recognition immediately after speech finishes
-            shouldBeListening = true;
-            if (recognition && !isListening) {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.log('Recognition already started:', e.message);
+        speak(
+            `${currentNum1} times ${currentNum2} is`,
+            () => {
+                // Speech finished callback (kept for compatibility)
+                console.log('Speech completely finished');
+            },
+            () => {
+                // Start recognition BEFORE speech finishes (triggered ~300ms early)
+                shouldBeListening = true;
+                if (recognition && !isListening) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('Recognition already started:', e.message);
+                    }
                 }
             }
-        });
+        );
     }, 100);
 }
 
