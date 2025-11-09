@@ -1,12 +1,14 @@
 let currentNum1 = 0;
 let currentNum2 = 0;
 let correctAnswer = 0;
+let currentOperation = 'multiplication'; // Track current operation type
 let recognition = null;
 let isListening = false;
 let shouldBeListening = false; // Track if we want recognition to be active
 let selectedVoice = null;
 let consecutiveRestarts = 0; // Track restart loop
 let selectedTables = [2, 3, 4, 5, 10]; // Default selected tables
+let enabledModes = ['multiplication']; // Array of enabled modes: can contain 'multiplication' and/or 'division'
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -169,15 +171,37 @@ function speak(text, onComplete, onNearEnd) {
 
 // Generate a new question
 function generateQuestion() {
+    // Pick a random operation from enabled modes
+    currentOperation = enabledModes[Math.floor(Math.random() * enabledModes.length)];
+
     // Pick a random number from selected tables
-    currentNum1 = selectedTables[Math.floor(Math.random() * selectedTables.length)];
-    // Multiply by any number from 1-10
-    currentNum2 = Math.floor(Math.random() * 10) + 1;
-    correctAnswer = currentNum1 * currentNum2;
+    const table = selectedTables[Math.floor(Math.random() * selectedTables.length)];
+    // Pick any number from 1-10
+    const multiplier = Math.floor(Math.random() * 10) + 1;
+
+    if (currentOperation === 'multiplication') {
+        currentNum1 = table;
+        currentNum2 = multiplier;
+        correctAnswer = currentNum1 * currentNum2;
+    } else {
+        // Division: we want table ÷ multiplier = answer
+        // So the display will show (table × multiplier) ÷ table = multiplier
+        currentNum1 = table * multiplier;  // The dividend
+        currentNum2 = table;  // The divisor
+        correctAnswer = multiplier;  // The quotient
+    }
 
     // Update the display
     document.getElementById('topNumber').textContent = currentNum1;
     document.getElementById('rightNumber').textContent = currentNum2;
+
+    // Update the operation symbol
+    const symbolElement = document.querySelector('.left-symbol');
+    if (currentOperation === 'division') {
+        symbolElement.textContent = '÷';
+    } else {
+        symbolElement.textContent = '×';
+    }
 
     // Generate the blocks grid
     generateBlocks(currentNum1, currentNum2);
@@ -193,9 +217,13 @@ function generateQuestion() {
     }
 
     // Ask the question out loud, then start recognition when done
+    const questionText = currentOperation === 'division'
+        ? `${currentNum1} divided by ${currentNum2} is`
+        : `${currentNum1} times ${currentNum2} is`;
+
     setTimeout(() => {
         speak(
-            `${currentNum1} times ${currentNum2} is`,
+            questionText,
             () => {
                 // Speech finished callback (kept for compatibility)
                 console.log('Speech completely finished');
@@ -451,6 +479,27 @@ function initSpeechRecognition() {
 
 // Initialize speech recognition first
 initSpeechRecognition();
+
+// Handle mode selection
+document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+
+        if (btn.classList.contains('active')) {
+            // Deselect - but don't allow deselecting all
+            if (enabledModes.length > 1) {
+                btn.classList.remove('active');
+                enabledModes = enabledModes.filter(m => m !== mode);
+            }
+        } else {
+            // Select
+            btn.classList.add('active');
+            enabledModes.push(mode);
+        }
+
+        console.log('Enabled modes:', enabledModes);
+    });
+});
 
 // Handle table selection
 document.querySelectorAll('.table-btn').forEach(btn => {
