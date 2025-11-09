@@ -212,9 +212,9 @@ function generateQuestion() {
     // Generate the blocks grid
     // For division: show the dividend arranged as (quotient columns × divisor rows)
     if (currentOperation === 'division') {
-        generateBlocks(correctAnswer, currentNum2);  // answer columns × divisor rows
+        generateBlocks(correctAnswer, currentNum2, 'division');  // answer columns × divisor rows
     } else {
-        generateBlocks(currentNum1, currentNum2);
+        generateBlocks(currentNum1, currentNum2, 'multiplication');
     }
 
     // Clear display and feedback
@@ -255,7 +255,7 @@ function generateQuestion() {
 }
 
 // Generate the visual blocks grid
-function generateBlocks(cols, rows) {
+function generateBlocks(cols, rows, operation = 'multiplication') {
     const grid = document.getElementById('blocksGrid');
     grid.innerHTML = '';
 
@@ -271,19 +271,36 @@ function generateBlocks(cols, rows) {
         const row = Math.floor(i / cols);
         const col = i % cols;
 
-        // Top row is pink
-        if (row === 0) {
-            block.classList.add('pink');
-        }
+        if (operation === 'division') {
+            // For division: bottom row is pink
+            if (row === rows - 1) {
+                block.classList.add('pink');
+            }
 
-        // Right column is blue
-        if (col === cols - 1) {
-            block.classList.add('blue');
-        }
+            // Right column is blue
+            if (col === cols - 1) {
+                block.classList.add('blue');
+            }
 
-        // Top-right corner gets both colors (diagonal split)
-        if (row === 0 && col === cols - 1) {
-            block.classList.add('diagonal-split');
+            // Bottom-right corner gets both colors (diagonal split flipped)
+            if (row === rows - 1 && col === cols - 1) {
+                block.classList.add('diagonal-split-flipped');
+            }
+        } else {
+            // For multiplication: top row is pink
+            if (row === 0) {
+                block.classList.add('pink');
+            }
+
+            // Right column is blue
+            if (col === cols - 1) {
+                block.classList.add('blue');
+            }
+
+            // Top-right corner gets both colors (diagonal split)
+            if (row === 0 && col === cols - 1) {
+                block.classList.add('diagonal-split');
+            }
         }
 
         grid.appendChild(block);

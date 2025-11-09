@@ -192,6 +192,10 @@ body.listening {
     background: linear-gradient(to bottom right, #e91e63 0%, #e91e63 50%, #2196F3 50%, #2196F3 100%);
 }
 
+.block.diagonal-split-flipped {
+    background: linear-gradient(to top right, #e91e63 0%, #e91e63 50%, #2196F3 50%, #2196F3 100%);
+}
+
 .right-number {
     font-size: 72px;
     font-weight: bold;
