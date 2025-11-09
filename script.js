@@ -8,7 +8,7 @@ let shouldBeListening = false; // Track if we want recognition to be active
 let selectedVoice = null;
 let consecutiveRestarts = 0; // Track restart loop
 let selectedTables = [2, 3, 4, 5, 10]; // Default selected tables
-let enabledModes = ['multiplication']; // Array of enabled modes: can contain 'multiplication' and/or 'division'
+let enabledModes = ['multiplication', 'division']; // Array of enabled modes: can contain 'multiplication' and/or 'division'
 
 // Convert spoken words to numbers
 function wordsToNumber(text) {
@@ -184,10 +184,9 @@ function generateQuestion() {
         currentNum2 = multiplier;
         correctAnswer = currentNum1 * currentNum2;
     } else {
-        // Division: we want table ÷ multiplier = answer
-        // So the display will show (table × multiplier) ÷ table = multiplier
+        // Division: we want (table × multiplier) ÷ table = multiplier
         currentNum1 = table * multiplier;  // The dividend
-        currentNum2 = table;  // The divisor
+        currentNum2 = table;  // The divisor (times table number on the right)
         correctAnswer = multiplier;  // The quotient
     }
 
@@ -197,14 +196,26 @@ function generateQuestion() {
 
     // Update the operation symbol
     const symbolElement = document.querySelector('.left-symbol');
+    const topNumberElement = document.getElementById('topNumber');
+    const answerSectionElement = document.querySelector('.answer-section');
+
     if (currentOperation === 'division') {
         symbolElement.textContent = '÷';
+        topNumberElement.classList.add('division');
+        answerSectionElement.classList.add('division');
     } else {
         symbolElement.textContent = '×';
+        topNumberElement.classList.remove('division');
+        answerSectionElement.classList.remove('division');
     }
 
     // Generate the blocks grid
-    generateBlocks(currentNum1, currentNum2);
+    // For division: show the dividend arranged as (quotient columns × divisor rows)
+    if (currentOperation === 'division') {
+        generateBlocks(correctAnswer, currentNum2);  // answer columns × divisor rows
+    } else {
+        generateBlocks(currentNum1, currentNum2);
+    }
 
     // Clear display and feedback
     document.getElementById('answerDisplay').textContent = '';
