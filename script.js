@@ -208,10 +208,20 @@ function generateQuestion() {
     currentNum2 = multiplier
     correctAnswer = currentNum1 * currentNum2
   } else {
-    // Division: we want (table × multiplier) ÷ table = multiplier
-    currentNum1 = table * multiplier // The dividend
-    currentNum2 = table // The divisor (times table number on the right)
-    correctAnswer = multiplier // The quotient
+    // Division: randomize whether table is the divisor or the quotient
+    const tableIsDivisor = Math.random() < 0.5
+
+    currentNum1 = table * multiplier // The dividend is always table × multiplier
+
+    if (tableIsDivisor) {
+      // (table × multiplier) ÷ table = multiplier
+      currentNum2 = table // The divisor
+      correctAnswer = multiplier // The quotient
+    } else {
+      // (table × multiplier) ÷ multiplier = table
+      currentNum2 = multiplier // The divisor
+      correctAnswer = table // The quotient
+    }
   }
 
   // Update the display
