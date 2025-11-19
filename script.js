@@ -156,12 +156,6 @@ function speak(text, onComplete) {
 
     isSpeaking = true
 
-    // Pause recognition while we speak to avoid picking up our own voice
-    if (recognition && isListening) {
-      console.log('Stopping recognition during speech')
-      recognition.stop()
-    }
-
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.voice = selectedVoice
     utterance.rate = 1.0 // Normal speed
@@ -172,19 +166,7 @@ function speak(text, onComplete) {
     utterance.onend = () => {
       console.log('Speech finished')
       isSpeaking = false
-
-      // Restart recognition after a short delay to let buffers clear
-      setTimeout(() => {
-        if (recognition && !isListening) {
-          console.log('Restarting recognition after speech')
-          try {
-            recognition.start()
-          } catch (e) {
-            console.log('Could not restart recognition:', e.message)
-          }
-        }
-        if (onComplete) onComplete()
-      }, 300)
+      if (onComplete) onComplete()
     }
 
     utterance.onerror = (event) => {
