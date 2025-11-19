@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="timer-bar" id="timerBar"></div>
+
     <div class="start-overlay" id="startOverlay">
         <div class="start-container">
             <div class="mode-selector">
@@ -47,6 +49,13 @@
             <span class="feedback" id="feedback"></span>
         </div>
         <div class="spacer"></div>
+    </div>
+
+    <div class="complete-overlay" id="completeOverlay" style="display: none;">
+        <div class="complete-container">
+            <h1 class="complete-message">Great work!</h1>
+            <button class="start-button" id="restartButton">Start again</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
