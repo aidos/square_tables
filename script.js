@@ -4,9 +4,9 @@ let correctAnswer = 0
 let currentOperation = 'multiplication' // Track current operation type
 let recognition = null
 let isListening = false
-let shouldBeListening = false // Track if we want recognition to be active
+let isSpeaking = false // Track if we're currently asking a question
 let selectedVoice = null
-let consecutiveRestarts = 0 // Track restart loop
+let waitingForAnswer = false // Track if we're expecting an answer
 let selectedTables = [2, 3, 4, 5, 10] // Default selected tables
 let enabledModes = ['multiplication', 'division'] // Array of enabled modes: can contain 'multiplication' and/or 'division'
 let timerInterval = null
@@ -147,12 +147,20 @@ if ('speechSynthesis' in window) {
 }
 
 // Speak text using Web Speech API
-function speak(text, onComplete, onNearEnd) {
+function speak(text, onComplete) {
   console.log('Speaking:', text)
 
   if ('speechSynthesis' in window) {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
+
+    isSpeaking = true
+
+    // Pause recognition while we speak to avoid picking up our own voice
+    if (recognition && isListening) {
+      console.log('Stopping recognition during speech')
+      recognition.stop()
+    }
 
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.voice = selectedVoice
@@ -160,26 +168,28 @@ function speak(text, onComplete, onNearEnd) {
     utterance.pitch = 1.1 // Slightly higher pitch for friendliness
     utterance.volume = 1.0
 
-    // Estimate speech duration and call onNearEnd slightly before it finishes
-    if (onNearEnd) {
-      const estimatedDuration = (text.length / 15) * 1000 // Rough estimate: ~15 chars/second
-      const triggerTime = Math.max(100, estimatedDuration - 150) // Start mic 150ms before end
-      setTimeout(() => {
-        console.log('Near end of speech, triggering early callback')
-        onNearEnd()
-      }, triggerTime)
-    }
-
     // Call callback when speech ends
-    if (onComplete) {
-      utterance.onend = () => {
-        console.log('Speech finished')
-        onComplete()
-      }
+    utterance.onend = () => {
+      console.log('Speech finished')
+      isSpeaking = false
+
+      // Restart recognition after a short delay to let buffers clear
+      setTimeout(() => {
+        if (recognition && !isListening) {
+          console.log('Restarting recognition after speech')
+          try {
+            recognition.start()
+          } catch (e) {
+            console.log('Could not restart recognition:', e.message)
+          }
+        }
+        if (onComplete) onComplete()
+      }, 300)
     }
 
     utterance.onerror = (event) => {
       console.log('Speech error:', event)
+      isSpeaking = false
       if (onComplete) onComplete()
     }
 
@@ -255,37 +265,18 @@ function generateQuestion() {
   document.getElementById('answerDisplay').textContent = ''
   document.getElementById('feedback').textContent = ''
 
-  // Stop recognition while speaking the question
-  shouldBeListening = false
-  if (recognition) {
-    recognition.stop()
-  }
-
-  // Ask the question out loud, then start recognition when done
+  // Ask the question out loud
   const questionText =
     currentOperation === 'division'
       ? `${currentNum1} divided by ${currentNum2} is`
       : `${currentNum1} times ${currentNum2} is`
 
   setTimeout(() => {
-    speak(
-      questionText,
-      () => {
-        // Speech finished callback (kept for compatibility)
-        console.log('Speech completely finished')
-      },
-      () => {
-        // Start recognition BEFORE speech finishes (triggered ~300ms early)
-        shouldBeListening = true
-        if (recognition && !isListening) {
-          try {
-            recognition.start()
-          } catch (e) {
-            console.log('Recognition already started:', e.message)
-          }
-        }
-      },
-    )
+    speak(questionText, () => {
+      // Ready to accept answers now that recognition has restarted
+      waitingForAnswer = true
+      console.log('Ready for answer')
+    })
   }, 100)
 }
 
@@ -351,15 +342,13 @@ function checkAnswer() {
     return // Don't check if no answer entered
   }
 
+  // Not waiting for answer anymore
+  waitingForAnswer = false
+
   if (userAnswer === correctAnswer) {
     // Correct answer
     feedback.textContent = '✓'
     feedback.className = 'feedback correct'
-
-    // Stop recognition temporarily
-    if (recognition) {
-      recognition.stop()
-    }
 
     // Wait 1 second then generate new question
     setTimeout(() => {
@@ -376,15 +365,8 @@ function checkAnswer() {
       feedback.textContent = ''
       feedback.className = 'feedback'
 
-      // Restart recognition for next attempt
-      shouldBeListening = true
-      if (recognition && !isListening) {
-        try {
-          recognition.start()
-        } catch (e) {
-          console.log('Recognition already started:', e.message)
-        }
-      }
+      // Ready for next attempt
+      waitingForAnswer = true
     }, 1500)
   }
 }
@@ -403,63 +385,63 @@ function initSpeechRecognition() {
 
   recognition = new SpeechRecognition()
   recognition.lang = 'en-US'
-  recognition.continuous = false
-  recognition.interimResults = false
+  recognition.continuous = true // Keep running continuously
+  recognition.interimResults = true // Get results as they come in
   recognition.maxAlternatives = 1
 
   recognition.onstart = () => {
     isListening = true
     document.body.classList.add('listening')
     console.log('Recognition started')
-    consecutiveRestarts = 0 // Reset counter on successful start
   }
 
   recognition.onend = () => {
     isListening = false
     document.body.classList.remove('listening')
-    console.log('Recognition ended, shouldBeListening:', shouldBeListening)
+    console.log('Recognition ended, restarting...')
 
-    // Restart if we should be listening
-    if (shouldBeListening) {
-      consecutiveRestarts++
-
-      // If we're restarting too quickly, add a longer delay
-      const delay = consecutiveRestarts > 3 ? 500 : 100
-
-      if (consecutiveRestarts > 5) {
-        console.warn('Too many rapid restarts, pausing recognition')
-        consecutiveRestarts = 0
-        // Wait longer before trying again
-        setTimeout(() => {
-          if (recognition && shouldBeListening && !isListening) {
-            try {
-              console.log('Resuming recognition after pause')
-              recognition.start()
-            } catch (e) {
-              console.log('Could not restart recognition:', e.message)
-            }
-          }
-        }, 2000)
-        return
-      }
-
-      setTimeout(() => {
-        if (recognition && shouldBeListening && !isListening) {
-          try {
-            recognition.start()
-          } catch (e) {
-            console.log('Could not restart recognition:', e.message)
-          }
+    // Always restart if recognition stops unexpectedly
+    setTimeout(() => {
+      if (recognition && !isListening) {
+        try {
+          recognition.start()
+        } catch (e) {
+          console.log('Could not restart recognition:', e.message)
         }
-      }, delay)
-    } else {
-      consecutiveRestarts = 0
-    }
+      }
+    }, 100)
   }
 
   recognition.onresult = (event) => {
-    let transcript = event.results[0][0].transcript.trim().toLowerCase()
+    // Get the latest result
+    const result = event.results[event.results.length - 1]
+
+    // Only process final results
+    if (!result.isFinal) {
+      return
+    }
+
+    let transcript = result[0].transcript.trim().toLowerCase()
     console.log('Heard:', transcript)
+
+    // Ignore if not waiting for an answer
+    if (!waitingForAnswer) {
+      console.log('Ignoring - not waiting for answer')
+      return
+    }
+
+    // Discard everything up to and including "is" (as a word)
+    const parts = transcript.split(/\bis\b/)
+    transcript = parts[parts.length - 1].trim()
+
+    if (!transcript) {
+      console.log('Ignoring - nothing after splitting on "is"')
+      return
+    }
+
+    if (parts.length > 1) {
+      console.log('After trimming "is":', transcript)
+    }
 
     // Fix common mishearings (only complete word matches)
     const corrections = {
@@ -511,33 +493,58 @@ function initSpeechRecognition() {
 
     if (number !== null) {
       document.getElementById('answerDisplay').textContent = number
-
-      // Stop recognition before checking answer
-      shouldBeListening = false
-      consecutiveRestarts = 0 // Reset on successful number detection
-      if (recognition) {
-        recognition.stop()
-      }
-
       checkAnswer()
     } else {
       console.log('No number detected, ignoring:', transcript)
-      consecutiveRestarts = 0 // Reset on any successful recognition (even non-numbers)
-      // Just ignore non-numbers, recognition will continue automatically
     }
   }
 
   recognition.onerror = (event) => {
     console.log('Speech recognition error:', event.error)
 
-    // Errors like 'no-speech' and 'audio-capture' will trigger onend, which will handle restart
-    if (event.error !== 'aborted' && event.error !== 'no-speech') {
+    // Don't worry about most errors - onend will restart
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      console.error('Microphone access denied')
       isListening = false
       document.body.classList.remove('listening')
     }
   }
 
-  // Don't start recognition immediately - wait for first question to be asked
+  // Don't start recognition immediately - wait for game to start
+}
+
+// Start recognition when ready
+function startRecognition() {
+  if (recognition && !isListening) {
+    try {
+      recognition.start()
+      console.log('Starting continuous recognition')
+    } catch (e) {
+      console.log('Could not start recognition:', e.message)
+    }
+  }
+}
+
+// Stop recognition completely
+function stopRecognition() {
+  if (recognition && isListening) {
+    // Prevent auto-restart by temporarily removing the onend handler
+    const originalOnEnd = recognition.onend
+    recognition.onend = () => {
+      isListening = false
+      document.body.classList.remove('listening')
+      console.log('Recognition stopped')
+    }
+
+    recognition.stop()
+
+    // Restore the handler after a delay
+    setTimeout(() => {
+      if (recognition) {
+        recognition.onend = originalOnEnd
+      }
+    }, 500)
+  }
 }
 
 // Initialize speech recognition first
@@ -576,10 +583,7 @@ function stopTimer() {
 
 function endGame() {
   // Stop speech recognition
-  shouldBeListening = false
-  if (recognition) {
-    recognition.stop()
-  }
+  stopRecognition()
 
   // Stop any ongoing speech
   if ('speechSynthesis' in window) {
@@ -609,15 +613,16 @@ function resetGame() {
   document.getElementById('startOverlay').style.display = 'flex'
 
   // Stop speech recognition
-  shouldBeListening = false
-  if (recognition) {
-    recognition.stop()
-  }
+  stopRecognition()
 
   // Stop any ongoing speech
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel()
   }
+
+  // Reset flags
+  waitingForAnswer = false
+  isSpeaking = false
 
   // Reset display
   document.getElementById('answerDisplay').textContent = ''
@@ -671,6 +676,9 @@ document.querySelectorAll('.table-btn').forEach((btn) => {
 document.getElementById('startButton').addEventListener('click', () => {
   // Hide start overlay
   document.getElementById('startOverlay').style.display = 'none'
+
+  // Start speech recognition
+  startRecognition()
 
   // Start the game first, then show container
   generateQuestion()
